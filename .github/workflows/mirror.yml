@@ -142,6 +142,9 @@ jobs:
             echo "R2 mirror:"
             echo "- Versioned objects: ${R2_PUBLIC_BASE_URL}/${tag}/<asset-name>"
             echo "- Latest objects: ${R2_PUBLIC_BASE_URL}/latest/<asset-name>"
+            echo "- Apple Silicon Mac: ${R2_PUBLIC_BASE_URL}/latest/mac-arm64"
+            echo "- Intel Mac: ${R2_PUBLIC_BASE_URL}/latest/mac-intel"
+            echo "- Windows x64: ${R2_PUBLIC_BASE_URL}/latest/win"
             echo
             echo "Checksums are attached in SHA256SUMS.txt. The probe manifest is attached in release-manifest.json."
           } > release-notes.md
@@ -187,6 +190,20 @@ jobs:
           )
           bash scripts/sync-r2.sh "$R2_BUCKET_NAME" "${{ steps.meta.outputs.tag }}" "${files[@]}"
           bash scripts/sync-r2.sh "$R2_BUCKET_NAME" latest "${files[@]}"
+
+          mac_arm64="artifacts/codex-macos/Codex-mac-arm64.dmg"
+          mac_intel="artifacts/codex-macos/Codex-mac-x64.dmg"
+          win_msix="$(find artifacts/codex-windows -maxdepth 1 -type f \( -name '*.Msix' -o -name '*.msix' \) | sort | head -n 1)"
+
+          test -f "$mac_arm64"
+          test -f "$mac_intel"
+          test -f "$win_msix"
+
+          bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/mac-arm64 "$mac_arm64" Codex-mac-arm64.dmg
+          bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/mac-intel "$mac_intel" Codex-mac-intel.dmg
+          bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/win "$win_msix" Codex-Windows-x64.msix
+          bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/checksums SHA256SUMS.txt SHA256SUMS.txt
+          bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/manifest release-manifest.json release-manifest.json
 
   no_changes:
     name: No new version

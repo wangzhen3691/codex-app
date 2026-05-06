@@ -64,6 +64,13 @@ OpenAI.Codex_<version>_x64__2p2nqsd0c76g0.Msix
 - Apple Silicon Mac：下载 `Codex-mac-arm64.dmg`
 - Intel Mac：下载 `Codex-mac-x64.dmg`
 
+也可以直接使用 R2 短链接：
+
+- Windows：[https://codexapp.agentsmirror.com/latest/win](https://codexapp.agentsmirror.com/latest/win)
+- Apple Silicon Mac：[https://codexapp.agentsmirror.com/latest/mac-arm64](https://codexapp.agentsmirror.com/latest/mac-arm64)
+- Intel Mac：[https://codexapp.agentsmirror.com/latest/mac-intel](https://codexapp.agentsmirror.com/latest/mac-intel)
+- 校验和：[https://codexapp.agentsmirror.com/latest/checksums](https://codexapp.agentsmirror.com/latest/checksums)
+
 建议同时下载 `SHA256SUMS.txt`，核对文件没有在下载过程中损坏。
 
 ## 自动轮询
@@ -134,6 +141,13 @@ Open the [latest GitHub Release](https://github.com/Wangnov/codex-app-mirror/rel
 - Windows: `OpenAI.Codex_..._x64__2p2nqsd0c76g0.Msix`
 - Apple Silicon Mac: `Codex-mac-arm64.dmg`
 - Intel Mac: `Codex-mac-x64.dmg`
+
+You can also use the R2 short links directly:
+
+- Windows: [https://codexapp.agentsmirror.com/latest/win](https://codexapp.agentsmirror.com/latest/win)
+- Apple Silicon Mac: [https://codexapp.agentsmirror.com/latest/mac-arm64](https://codexapp.agentsmirror.com/latest/mac-arm64)
+- Intel Mac: [https://codexapp.agentsmirror.com/latest/mac-intel](https://codexapp.agentsmirror.com/latest/mac-intel)
+- Checksums: [https://codexapp.agentsmirror.com/latest/checksums](https://codexapp.agentsmirror.com/latest/checksums)
 
 Download `SHA256SUMS.txt` as well if you want to verify that the file arrived intact.
 
