@@ -21,6 +21,12 @@ The workflow creates a release tagged like:
 codex-app-YYYYMMDD-HHMMSS
 ```
 
+It also runs every 15 minutes. Scheduled runs first probe the current upstream
+installer versions and compare them with the latest GitHub Release. If nothing
+changed, the workflow stops before downloading installers or publishing a new
+release. Manual runs can set `force_release` to publish even when the probe
+matches the latest release.
+
 ## Sources
 
 The macOS URLs are the same URLs used by the official `openai/codex` CLI
@@ -43,3 +49,6 @@ Entra ID authentication, which is not suitable for unattended GitHub-hosted
 runners. This repository therefore uses the same Microsoft Store metadata path
 that the Store client ultimately relies on for package CDN URLs, implemented
 directly with .NET and without third-party Store helper packages.
+
+Each new release includes `release-manifest.json`, which records the Windows
+MSIX moniker plus the macOS DMG HTTP fingerprints used by the polling check.
