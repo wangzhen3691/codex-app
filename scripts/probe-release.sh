@@ -86,6 +86,7 @@ fi
 
 windows_package="${link_line%%$'\t'*}"
 windows_url="${link_line#*$'\t'}"
+windows_version="$(sed -E 's/^OpenAI\.Codex_([^_]+)_.*/\1/' <<<"$windows_package")"
 windows_content_length="$(header_value "$windows_url" "content-length")"
 windows_last_modified="$(header_value "$windows_url" "last-modified")"
 windows_etag="$(header_value "$windows_url" "etag")"
@@ -102,6 +103,7 @@ jq -n \
   --arg generatedAt "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
   --arg productId "$product_id" \
   --arg architecture "$architecture" \
+  --arg windowsVersion "$windows_version" \
   --arg windowsPackage "$windows_package" \
   --arg windowsUrlHost "$(printf '%s' "$windows_url" | sed -E 's#^(https?://[^/]+).*#\1#')" \
   --argjson windowsContentLength "$(json_number "$windows_content_length")" \
@@ -122,6 +124,7 @@ jq -n \
       windows: {
         productId: $productId,
         architecture: $architecture,
+        version: $windowsVersion,
         packageMoniker: $windowsPackage,
         urlHost: $windowsUrlHost,
         contentLength: $windowsContentLength,
@@ -178,13 +181,9 @@ else
   fi
 fi
 
-if [[ -n "$release_tag_input" ]]; then
-  release_tag="$release_tag_input"
-else
-  release_tag="codex-app-$(date -u +'%Y%m%d-%H%M%S')"
-fi
+release_tag="$release_tag_input"
 
-version_summary="windows=$windows_package; mac-arm64=$arm_etag/$arm_content_length; mac-x64=$x64_etag/$x64_content_length"
+version_summary="windows=$windows_version ($windows_package); mac-arm64=$arm_etag/$arm_content_length; mac-x64=$x64_etag/$x64_content_length"
 
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   {

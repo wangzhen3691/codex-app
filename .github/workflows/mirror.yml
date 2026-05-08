@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Optional release tag. Defaults to codex-app-YYYYMMDD-HHMMSS.
+        description: Optional release tag. Defaults to a version-derived tag.
         required: false
         type: string
       force_release:
@@ -64,6 +64,9 @@ jobs:
       - name: Download macOS DMGs
         run: bash scripts/download-macos.sh dist/macos
 
+      - name: Read macOS app metadata
+        run: bash scripts/read-macos-metadata.sh dist/macos/macos-metadata.json dist/macos/Codex-mac-arm64.dmg dist/macos/Codex-mac-x64.dmg
+
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -110,44 +113,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag="${{ needs.probe.outputs.release_tag }}"
-          {
-            echo "tag=$tag"
-            echo "title=Codex App Mirror ${tag#codex-app-}"
-          } >> "$GITHUB_OUTPUT"
-
-          cat > release-manifest.json <<'JSON'
+          cat > probe-manifest.json <<'JSON'
           ${{ needs.probe.outputs.manifest }}
           JSON
 
-          find artifacts -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
-
-          windows_package="$(jq -r '.sources.windows.packageMoniker' release-manifest.json)"
-          mac_arm_etag="$(jq -r '.sources.macos.arm64.etag' release-manifest.json)"
-          mac_x64_etag="$(jq -r '.sources.macos.x64.etag' release-manifest.json)"
-
-          {
-            echo "Official Codex desktop app installer mirror."
-            echo
-            echo "Detected versions:"
-            echo "- Windows: ${windows_package}"
-            echo "- macOS arm64 ETag: ${mac_arm_etag}"
-            echo "- macOS x64 ETag: ${mac_x64_etag}"
-            echo
-            echo "Sources:"
-            echo "- Windows: Microsoft Store ProductId 9PLM9XGG6VKS via DisplayCatalog/FE3 metadata"
-            echo "- macOS arm64: https://persistent.oaistatic.com/codex-app-prod/Codex.dmg"
-            echo "- macOS x64: https://persistent.oaistatic.com/codex-app-prod/Codex-latest-x64.dmg"
-            echo
-            echo "R2 mirror:"
-            echo "- Versioned objects: ${R2_PUBLIC_BASE_URL}/${tag}/<asset-name>"
-            echo "- Latest objects: ${R2_PUBLIC_BASE_URL}/latest/<asset-name>"
-            echo "- Apple Silicon Mac: ${R2_PUBLIC_BASE_URL}/latest/mac-arm64"
-            echo "- Intel Mac: ${R2_PUBLIC_BASE_URL}/latest/mac-intel"
-            echo "- Windows x64: ${R2_PUBLIC_BASE_URL}/latest/win"
-            echo
-            echo "Checksums are attached in SHA256SUMS.txt. The probe manifest is attached in release-manifest.json."
-          } > release-notes.md
+          bash scripts/prepare-release-metadata.sh \
+            probe-manifest.json \
+            artifacts/codex-macos/macos-metadata.json \
+            artifacts \
+            "$R2_PUBLIC_BASE_URL" \
+            "${{ needs.probe.outputs.release_tag }}"
 
       - name: Publish GitHub Release
         env:
@@ -159,7 +134,9 @@ jobs:
           gh release create "${{ steps.meta.outputs.tag }}" \
             --title "${{ steps.meta.outputs.title }}" \
             --notes-file release-notes.md \
-            artifacts/codex-macos/* \
+            artifacts/codex-macos/Codex-mac-arm64.dmg \
+            artifacts/codex-macos/Codex-mac-x64.dmg \
+            artifacts/codex-macos/SHA256SUMS-macos.txt \
             artifacts/codex-windows/* \
             release-manifest.json \
             SHA256SUMS.txt
@@ -182,15 +159,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          files=(
-            artifacts/codex-macos/*
-            artifacts/codex-windows/*
-            release-manifest.json
-            SHA256SUMS.txt
-          )
-          bash scripts/sync-r2.sh "$R2_BUCKET_NAME" "${{ steps.meta.outputs.tag }}" "${files[@]}"
-          bash scripts/sync-r2.sh "$R2_BUCKET_NAME" latest "${files[@]}"
-
           mac_arm64="artifacts/codex-macos/Codex-mac-arm64.dmg"
           mac_intel="artifacts/codex-macos/Codex-mac-x64.dmg"
           win_msix="$(find artifacts/codex-windows -maxdepth 1 -type f \( -name '*.Msix' -o -name '*.msix' \) | sort | head -n 1)"
@@ -198,6 +166,8 @@ jobs:
           test -f "$mac_arm64"
           test -f "$mac_intel"
           test -f "$win_msix"
+
+          bash scripts/clear-r2-prefix.sh "$R2_BUCKET_NAME" latest
 
           bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/mac-arm64 "$mac_arm64" Codex-mac-arm64.dmg
           bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/mac-intel "$mac_intel" Codex-mac-intel.dmg
