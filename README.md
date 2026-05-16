@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./logo.png" width="220" alt="codex-app-mirror logo">
+  <img src="./assets/logo.png" width="220" alt="codex-app-mirror logo">
 </p>
 
 <h1 align="center">codex-app-mirror</h1>
