@@ -181,7 +181,13 @@ else
   fi
 fi
 
-release_tag="$release_tag_input"
+if [[ -n "$release_tag_input" ]]; then
+  release_tag="$release_tag_input"
+elif [[ "$force_release" == "true" ]]; then
+  release_tag="codex-app-force-$(date -u +'%Y%m%d-%H%M%S')"
+else
+  release_tag=""
+fi
 
 version_summary="windows=$windows_version ($windows_package); mac-arm64=$arm_etag/$arm_content_length; mac-x64=$x64_etag/$x64_content_length"
 
