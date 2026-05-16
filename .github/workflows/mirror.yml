@@ -181,13 +181,36 @@ jobs:
           test -f "$mac_intel"
           test -f "$win_msix"
 
-          bash scripts/clear-r2-prefix.sh "$R2_BUCKET_NAME" latest
+          staging_prefix="staging/${{ steps.meta.outputs.tag }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          cleanup_staging() {
+            bash scripts/clear-r2-prefix.sh "$R2_BUCKET_NAME" "$staging_prefix" || true
+          }
+          trap cleanup_staging EXIT
+
+          upload_aliases() {
+            local prefix="$1"
+            bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" "$prefix/mac-arm64" "$mac_arm64" Codex-mac-arm64.dmg
+            bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" "$prefix/mac-intel" "$mac_intel" Codex-mac-intel.dmg
+            bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" "$prefix/win" "$win_msix" Codex-Windows-x64.msix
+            bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" "$prefix/checksums" SHA256SUMS.txt SHA256SUMS.txt
+            bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" "$prefix/manifest" release-manifest.json release-manifest.json
+          }
+
+          upload_aliases "$staging_prefix"
+          aws s3 cp "s3://$R2_BUCKET_NAME/$staging_prefix/manifest" /tmp/r2-staging-manifest.json \
+            --endpoint-url "$R2_S3_ENDPOINT" \
+            --region "${AWS_DEFAULT_REGION:-auto}" \
+            --no-progress
+          cmp release-manifest.json /tmp/r2-staging-manifest.json
 
           bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/mac-arm64 "$mac_arm64" Codex-mac-arm64.dmg
           bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/mac-intel "$mac_intel" Codex-mac-intel.dmg
           bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/win "$win_msix" Codex-Windows-x64.msix
           bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/checksums SHA256SUMS.txt SHA256SUMS.txt
           bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/manifest release-manifest.json release-manifest.json
+
+          curl -fsSL --retry 5 --retry-delay 2 "$R2_PUBLIC_BASE_URL/latest/manifest?run=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" -o /tmp/r2-public-manifest.json
+          cmp release-manifest.json /tmp/r2-public-manifest.json
 
   no_changes:
     name: No new version

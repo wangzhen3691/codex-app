@@ -25,6 +25,7 @@ upload_file() {
   local object_path="${2#/}"
   local download_name="$3"
   local content_type_source="$4"
+  local cache_control="${R2_CACHE_CONTROL:-no-cache}"
 
   if [[ ! -f "$file" ]]; then
     echo "Not a file: $file" >&2
@@ -44,6 +45,7 @@ upload_file() {
     --region "${AWS_DEFAULT_REGION:-auto}" \
     --content-type "$content_type" \
     --content-disposition "attachment; filename=\"$download_name\"" \
+    --cache-control "$cache_control" \
     --no-progress
 }
 
