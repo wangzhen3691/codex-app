@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="./assets/banner.png" alt="codex-app-mirror banner">
+</p>
+
+<p align="center">
   <img src="./assets/logo.png" width="220" alt="codex-app-mirror logo">
 </p>
 

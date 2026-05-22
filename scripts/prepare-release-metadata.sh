@@ -153,6 +153,10 @@ mac_x64_content_length="$(jq -r '.sources.macos.x64.contentLength' release-manif
 mac_x64_etag="$(jq -r '.sources.macos.x64.etag // empty' release-manifest.json)"
 
 {
+  echo "<!-- release-banner:start -->"
+  echo "![Codex App Mirror](https://github.com/Wangnov/codex-app-mirror/releases/latest/download/banner.png)"
+  echo "<!-- release-banner:end -->"
+  echo
   echo "# Codex App 安装包镜像更新"
   echo
   echo "本次 Release 同步了官方 Codex 桌面端安装包，方便在 GitHub Releases 中下载当前版本对应的安装包。"
