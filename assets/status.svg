@@ -208,8 +208,8 @@
       <circle cx="960"  cy="8" r="3" fill="#a5b4fc"/>
       <circle cx="1060" cy="8" r="3" fill="#a5b4fc"/>
 
-      <!-- moving blip -->
-      <circle cy="8" r="5.5" fill="#3941FF" opacity="0.85">
+      <!-- moving blip (explicit initial cx/opacity so static renders don't show a stray dot at x=0) -->
+      <circle cx="260" cy="8" r="5.5" fill="#3941FF" opacity="0">
         <animate attributeName="cx" from="260" to="1060" dur="6s" repeatCount="indefinite"/>
         <animate attributeName="opacity" values="0;0.9;0.9;0" keyTimes="0;0.06;0.94;1" dur="6s" repeatCount="indefinite"/>
       </circle>
