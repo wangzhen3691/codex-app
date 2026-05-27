@@ -9,6 +9,14 @@ windows_update_manifest_url="https://persistent.oaistatic.com/codex-app-prod/win
 force_release="${FORCE_RELEASE:-false}"
 release_tag_input="${RELEASE_TAG:-}"
 manifest_path="${MANIFEST_PATH:-release-manifest.json}"
+curl_retry_args=(
+  --retry 5
+  --retry-delay 2
+  --retry-max-time 300
+  --connect-timeout 20
+  --max-time 120
+  --retry-all-errors
+)
 
 require() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -17,11 +25,31 @@ require() {
   fi
 }
 
+redact_url() {
+  sed -E 's/[?].*/?<redacted>/' <<<"$1"
+}
+
+curl_get() {
+  local label="$1"
+  local url="$2"
+
+  echo "Fetching $label: $(redact_url "$url")" >&2
+  curl -fsSL "${curl_retry_args[@]}" "$url"
+}
+
+curl_head() {
+  local label="$1"
+  local url="$2"
+
+  echo "Fetching $label headers: $(redact_url "$url")" >&2
+  curl -fsSI -L "${curl_retry_args[@]}" "$url"
+}
+
 header_value() {
-  local url="$1"
+  local headers="$1"
   local name="$2"
-  curl -fsSI -L --retry 3 --retry-delay 2 "$url" |
-    tr -d '\r' |
+
+  tr -d '\r' <<<"$headers" |
     awk -v wanted="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')" '
       BEGIN { value = "" }
       {
@@ -70,8 +98,9 @@ PY
 }
 
 appcast_latest() {
-  local url="$1"
-  curl -fsSL --retry 3 --retry-delay 2 "$url" |
+  local label="$1"
+  local url="$2"
+  curl_get "$label" "$url" |
     python3 -c '
 import json
 import sys
@@ -186,16 +215,17 @@ fi
 windows_package="${link_line%%$'\t'*}"
 windows_url="${link_line#*$'\t'}"
 windows_version="$(sed -E 's/^OpenAI\.Codex_([^_]+)_.*/\1/' <<<"$windows_package")"
-windows_update_json="$(curl -fsSL --retry 3 --retry-delay 2 "$windows_update_manifest_url")"
+windows_update_json="$(curl_get "Windows update manifest" "$windows_update_manifest_url")"
 windows_update_version="$(jq -r '.buildVersion // empty' <<<"$windows_update_json")"
 windows_update_product_id="$(jq -r '.storeProductId // empty' <<<"$windows_update_json")"
 windows_update_package_identity="$(jq -r '.packageIdentity // empty' <<<"$windows_update_json")"
-windows_content_length="$(header_value "$windows_url" "content-length")"
-windows_last_modified="$(header_value "$windows_url" "last-modified")"
-windows_etag="$(header_value "$windows_url" "etag")"
+windows_headers="$(curl_head "Windows MSIX" "$windows_url")"
+windows_content_length="$(header_value "$windows_headers" "content-length")"
+windows_last_modified="$(header_value "$windows_headers" "last-modified")"
+windows_etag="$(header_value "$windows_headers" "etag")"
 
-arm_appcast_json="$(appcast_latest "$arm_appcast_url")"
-x64_appcast_json="$(appcast_latest "$x64_appcast_url")"
+arm_appcast_json="$(appcast_latest "macOS arm64 appcast" "$arm_appcast_url")"
+x64_appcast_json="$(appcast_latest "macOS x64 appcast" "$x64_appcast_url")"
 arm_appcast_version="$(jq -r '.shortVersionString' <<<"$arm_appcast_json")"
 arm_appcast_build="$(jq -r '.version' <<<"$arm_appcast_json")"
 x64_appcast_version="$(jq -r '.shortVersionString' <<<"$x64_appcast_json")"
@@ -208,12 +238,14 @@ fi
 
 arm_url="https://persistent.oaistatic.com/codex-app-prod/Codex-${arm_appcast_version}-arm64.dmg"
 x64_url="https://persistent.oaistatic.com/codex-app-prod/Codex-${x64_appcast_version}-x64.dmg"
-arm_content_length="$(header_value "$arm_url" "content-length")"
-arm_last_modified="$(header_value "$arm_url" "last-modified")"
-arm_etag="$(header_value "$arm_url" "etag")"
-x64_content_length="$(header_value "$x64_url" "content-length")"
-x64_last_modified="$(header_value "$x64_url" "last-modified")"
-x64_etag="$(header_value "$x64_url" "etag")"
+arm_headers="$(curl_head "macOS arm64 DMG" "$arm_url")"
+x64_headers="$(curl_head "macOS x64 DMG" "$x64_url")"
+arm_content_length="$(header_value "$arm_headers" "content-length")"
+arm_last_modified="$(header_value "$arm_headers" "last-modified")"
+arm_etag="$(header_value "$arm_headers" "etag")"
+x64_content_length="$(header_value "$x64_headers" "content-length")"
+x64_last_modified="$(header_value "$x64_headers" "last-modified")"
+x64_etag="$(header_value "$x64_headers" "etag")"
 
 jq -n \
   --arg generatedAt "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \

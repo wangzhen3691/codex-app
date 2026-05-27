@@ -219,7 +219,14 @@ jobs:
           bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/checksums SHA256SUMS.txt SHA256SUMS.txt
           bash scripts/sync-r2.sh --object "$R2_BUCKET_NAME" latest/manifest release-manifest.json release-manifest.json
 
-          curl -fsSL --retry 5 --retry-delay 2 "$R2_PUBLIC_BASE_URL/latest/manifest?run=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" -o /tmp/r2-public-manifest.json
+          curl -fsSL \
+            --retry 5 \
+            --retry-delay 2 \
+            --retry-all-errors \
+            --connect-timeout 20 \
+            --max-time 120 \
+            "$R2_PUBLIC_BASE_URL/latest/manifest?run=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            -o /tmp/r2-public-manifest.json
           cmp release-manifest.json /tmp/r2-public-manifest.json
 
   no_changes:
