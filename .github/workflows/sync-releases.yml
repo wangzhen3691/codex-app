@@ -1,0 +1,13 @@
+name: Sync All Historical Releases
+on:
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync Releases from Upstream
+        uses: jasonrudolph/clone-releases-action@v1
+        with:
+          upstream_repo: "Wangnov/codex-app-mirror"
+          my_token: ${{ secrets.GITHUB_TOKEN }}
