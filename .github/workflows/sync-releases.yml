@@ -6,8 +6,31 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Sync Releases
-        uses: itsmeyg/sync-releases-action@v1
-        with:
-          source_repo: "Wangnov/codex-app-mirror"
-          gh_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sync Historical Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. 获取原作者仓库的所有 Release 信息
+          gh release list --repo Wangnov/codex-app-mirror --limit 100 | while read -r line; do
+            tag=$(echo "$line" | awk '{print $1}')
+            title=$(echo "$line" | awk '{print $2}')
+            
+            echo "正在处理版本: $tag ..."
+            
+            # 2. 如果你自己的仓库里还没有这个标签，就开始搬运
+            if ! gh release view "$tag" >/dev/null 2>&1; then
+              echo "检测到新版本 $tag，正在下载原安装包..."
+              mkdir -p dist
+              gh release download "$tag" --repo Wangnov/codex-app-mirror --dir dist
+              
+              echo "正在创建并上传到你的仓库..."
+              gh release create "$tag" dist/* --title "$title" --notes "同步自原仓库历史版本 $tag"
+              rm -rf dist
+            else
+              echo "版本 $tag 已存在，跳过。"
+            fi
+          done
+
